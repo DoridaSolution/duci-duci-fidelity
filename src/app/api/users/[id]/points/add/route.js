@@ -1,5 +1,5 @@
 // app/api/users/[id]/points/add/route.js
-import pool from '../../../../../lib/db';
+import pool from "../../../../../lib/db";
 
 export async function POST(request, { params }) {
   const { id } = params;
