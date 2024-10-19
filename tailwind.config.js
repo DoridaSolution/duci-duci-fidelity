@@ -13,5 +13,8 @@ module.exports = {
       },
     },
   },
-  plugins: [],
+  plugins: [require('daisyui')],
+  daisyui: {
+    themes: ["cupcake"], // Applica il tema "cupcake"
+  },
 };
