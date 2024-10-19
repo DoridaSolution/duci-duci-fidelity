@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import AddPointsForm from '../components/AddPointsForm';
-import ProductScanner from '../components/ProductScanner';
+import AddPointsForm from '@/app/Components/AddPointsForm';
+import ProductScanner from '@/app/Components/ProductScanner';
+
 
 
 import useAuth from '../hook/useAuth';
