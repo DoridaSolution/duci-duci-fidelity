@@ -1,5 +1,4 @@
-import RegisterForm from "@app/components/RegisterForm";
-
+import RegisterForm from "@app/Components/RegisterForm";
 const Register = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-100 to-pink-200 flex flex-col justify-center items-center p-3">
