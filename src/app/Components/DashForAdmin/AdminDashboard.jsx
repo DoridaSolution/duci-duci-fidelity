@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import UserTable from '../../components/DashForAdmin/UserTable';
-import TransactionStats from '../../components/DashForAdmin/TransactionStats';
-import ProductStats from '../../components/DashForAdmin/ProductStats';
-import RewardStats from '../../components/DashForAdmin/RewardStats';
-import ReferralStats from '../../components/DashForAdmin/ReferralStats';
+import UserTable from '../../Components/DashForAdmin/UserTable';
+import TransactionStats from '../../Components/DashForAdmin/TransactionStats';
+import ProductStats from '../../Components/DashForAdmin/ProductStats';
+import RewardStats from '../../Components/DashForAdmin/RewardStats';
+import ReferralStats from '../../Components/DashForAdmin/ReferralStats';
 import KPISection from './KPISection';
 import useAuth from '@/app/hook/useAuth';
 
@@ -20,6 +20,7 @@ const AdminDashboard = () => {
   if (!isAuthenticated || userRole !== 'admin') {
     return <div className="vh-100 bg-black text-white flex justify-center items-center">Accesso negato</div>;
   }
+  
   const [activeSection, setActiveSection] = useState('users');
   const [filter, setFilter] = useState('month'); // Default: Ultimo Mese
   const [kpis, setKpis] = useState({
