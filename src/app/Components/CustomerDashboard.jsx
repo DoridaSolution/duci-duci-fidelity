@@ -1,49 +1,110 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FaHome, FaUser, FaGift } from "react-icons/fa";
-import QRCode from 'qrcode';
-import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import LogoutButton from './Logout';
+import AlertModal from './AlertModal';
+import Navigation from './Dashboard/Navigation';
+import Shop from "../Components/Dashboard/Shop";
+import RewardsComponent from './Dashboard/RewardsComponent'; // Importiamo il nuovo componente
+import ReferralManagement from "../Components/ReferallManagment";
+import PointsProgress from './PointsProgress';
+import Test from './ModalPhoto';
+import ModalPhoto from './ModalPhoto';
 
 const CustomerDashboard = () => {
   const [activeTab, setActiveTab] = useState("home");
   const [points, setPoints] = useState(0);
   const [qrCode, setQrCode] = useState('');
   const [products, setProducts] = useState([]);
-  const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState('');
   const [user, setUser] = useState("");
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [userId, setUserId] = useState(null);
-  const [qrCodes, setQrCodes] = useState([]); // Stato per i QR code generati
-  const [showQrProducts, setShowQrProducts] = useState(false); // Stato per visualizzare solo prodotti con QR code
-  const [showQrCodeIndex, setShowQrCodeIndex] = useState(null); // Stato per tracciare l'indice del QR code da mostrare
+  const [alert, setAlert] = useState(null);
+  const [purchases, setPurchases] = useState([]); // Aggiungi questo stato
+  const [level, setLevel] = useState('Bronze'); // Aggiungi stato per il livello
+const [realpoint, setRealpoint] = useState(0);
+const [photoUrl, setPhotoUrl] = useState('');
+const [isModalOpen, setIsModalOpen] = useState(false); // Stato per il modale
 
   useEffect(() => {
-    fetchData(); // Recupera i dati al caricamento del componente
+    if (alert) {
+      const timer = setTimeout(() => {
+        setAlert(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [alert]);
+
+  useEffect(() => {
+    fetchData();
   }, [userId]);
+
+useEffect(()=>{
+  fetchUserMembership();
+  const storedPhotoUrl = localStorage.getItem('photoUrl');
+    if (storedPhotoUrl) {
+      setPhotoUrl(storedPhotoUrl);
+    }
+},[])
+
+const handlePhotoUpdate = (newPhotoUrl) => {
+  setPhotoUrl(newPhotoUrl);
+  localStorage.setItem('photoUrl', newPhotoUrl);
+  setIsModalOpen(false); // Chiudi il modale dopo l'aggiornamento
+};
+
+
+  const fetchUserMembership = async () => {
+    try {
+      // Chiamata all'API
+      const response = await fetch('/api/users/updateUserLevel', {
+        method: 'POST',
+        credentials: 'include', // Include il cookie per l'autenticazione
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+  
+      // Verifica se la risposta è ok (status 2xx)
+      if (response.ok) {
+        const data = await response.json();
+        setLevel(data.level); // Aggiorna il livello dell'utente
+ setRealpoint(data.totalPoints);
+ console.log(data.realpoint) // Aggiorna ilealpoint); // Aggiorna ilealpoint); // Aggiorna ilotalPoints)
+        console.log('Livello aggiornato:', data);
+        // Esegui qualsiasi altra logica necessaria con i dati restituiti
+      } else {
+        // Gestione degli errori basata sul codice di risposta
+        console.error('Errore durante l\'aggiornamento del livello:', response.status);
+      }
+    } catch (error) {
+      // Gestione degli errori di rete o altre eccezioni
+      console.error('Errore di rete:', error);
+    }
+  };
+  
+
 
   const fetchData = async () => {
     try {
-      // Recupera profilo utente
       const resProfile = await fetch('/api/users/profile', {
         method: 'GET',
-        credentials: 'include',  // Include i cookie nella richiesta
+        credentials: 'include',
       });
+
       if (resProfile.ok) {
         const dataProfile = await resProfile.json();
         setPoints(dataProfile.points);
         setQrCode(dataProfile.qr_code);
         setUser(dataProfile.name);
+        setUserId(dataProfile.id);
       } else {
         const errorData = await resProfile.json();
-        setMessage(errorData.message || 'Errore nel caricamento del profilo. Effettua il login.');
-        window.location.href = '/Login';  // Reindirizza alla pagina di login
+        setAlert({ message: errorData.message || 'Errore nel caricamento del profilo. Effettua il login.', type: 'errore' });
+        setTimeout(() => {
+          window.location.href = '/Login';
+        }, 3000);
       }
 
-      // Recupera prodotti
       const resProducts = await fetch('/api/product', {
         method: 'GET',
         credentials: 'include',
@@ -52,212 +113,127 @@ const CustomerDashboard = () => {
       if (resProducts.ok) {
         setProducts(dataProducts);
       } else {
-        console.error(dataProducts.message);
-      }
-
-      // Recupera QR code e transazioni
-      const resQrCodes = await fetch('/api/users/history/qr', {
-        method: 'GET',
-        credentials: 'include',
-      });
-      if (resQrCodes.ok) {
-        const dataQrCodes = await resQrCodes.json();
-        setQrCodes(dataQrCodes.qrCodes);
-      } else {
-        const errorQr = await resQrCodes.json();
-        console.error(errorQr.message || 'Errore nel caricamento dei QR code.');
+        setAlert({ message: dataProducts.message || 'Errore nel caricamento dei prodotti.', type: 'errore' });
       }
     } catch (error) {
       console.error('Errore durante il fetch dei dati:', error);
-      setMessage('Errore nel caricamento dei dati.');
+      setAlert({ message: 'Errore nel caricamento dei dati.', type: 'errore' });
     }
   };
 
-  const handleProductClick = (product) => {
-    if (points >= product.points) {
-      setSelectedProduct(product);
-      setIsModalOpen(true);
-    } else {
-      alert('Non hai abbastanza punti per acquistare questo prodotto.');
-    }
-  };
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'home':
+        return (
+          <div>
+            {/* QR Code Section */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 flex flex-col items-center ">
+              {qrCode && (
+                <img
+                  src={qrCode}
+                  alt="QR Code"
+                  width={128}
+                  height={128}
+                  className="w-32 h-32 object-cover rounded-3 shadow-md qr"
+                />
+              )}
+              <p className="text-center mt-2 font-medium">Scannerizza al checkout</p>
+            </div>
+            {/* Profile Section */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 flex justify-between items-center">
+              <div className="flex items-center">
+                {/* Cerchio con la foto */}
+                <div
+                  className="relative w-16 h-16 mr-4 rounded-full border-4 border-fuchsia-600 flex items-center justify-center cursor-pointer"
+                  onClick={() => photoUrl=="null" && setIsModalOpen(true)} // Apri il modale se non c'è una foto
+                >
+                  {photoUrl ? (
+                    <img
+                      src={photoUrl}
+                      alt="User Profile"
+                      className="w-full h-full object-cover rounded-full"
+                      style={{ objectPosition: 'top center' }}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center text-fuchsia-600">
+                      <i className="fas fa-camera text-2xl"></i>
+                      <p className="text-sm">Aggiungi Foto</p>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-start">{user}</h2>
+                  <p className="text-fuchsia-600 font-medium text-start">Punti Accumulati: {points}</p>
+                  <p className="text-fuchsia-900 font-medium text-start">Livello Goloso (1)</p>
+                </div>
+              </div>
+              <LogoutButton />
+            </div>
 
-  const handleConfirmPurchase = async () => {
-    try {
-      // Invia una richiesta per notificare l'admin dell'acquisto
-      const resNotify = await fetch(`/api/users/notifyadmin`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ productId: selectedProduct.id }),
-      });
+            <div className="bg-white rounded-2xl items-center">
+              <PointsProgress points={realpoint} level={level} /> {/* Passa il livello al componente */}
+            </div>
 
-      if (resNotify.ok) {
-        // Genera un QR code per l'acquisto
-        const qrData = { userId, productId: selectedProduct.id };
-        const qrCodeGenerated = await QRCode.toDataURL(JSON.stringify(qrData));
+            {/* Sezione prodotti disponibili */}
+          
+            <Shop
+              products={products}
+              points={points}
+              userId={userId}
+              setPoints={setPoints}
+              setAlert={setAlert}
+              setPurchases={setPurchases} 
+            />
+          </div>
+        );
 
-        // Salva il QR code nel database
-        const resSaveQr = await fetch(`/api/users/saveQr`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify({ qrCode: qrCodeGenerated, productId: selectedProduct.id }),
-        });
+      case 'profile':
+        return <div className="text-center text-gray-500"></div>;
 
-        if (resSaveQr.ok) {
-          // Aggiorna i punti
-          const resPoints = await fetch(`/api/users/updatePoints`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            credentials: 'include',
-            body: JSON.stringify({ pointsToDeduct: selectedProduct.points }),
-          });
+      case 'rewards':
+        return (
+          <RewardsComponent
+            products={products}
+            setAlert={setAlert}
+          />
+        );
 
-          if (resPoints.ok) {
-            const dataPoints = await resPoints.json();
-            setPoints(prevPoints => prevPoints - selectedProduct.points); // Aggiorna localmente i punti
-            setQrCodes(prevQrCodes => [...prevQrCodes, { product_id: selectedProduct.id, qr_code: qrCodeGenerated }]);
-            setQrCode(qrCodeGenerated); // Imposta il QR code generato
-            setMessage(`Hai acquistato ${selectedProduct.name}!`);
-            setMessageType("success");
-          } else {
-            const dataPoints = await resPoints.json();
-            alert(dataPoints.message || 'Errore durante la sottrazione dei punti.');
-          }
-        } else {
-          const dataSaveQr = await resSaveQr.json();
-          alert(dataSaveQr.message || 'Errore durante il salvataggio del QR code.');
-        }
-      } else {
-        const dataNotify = await resNotify.json();
-        alert(dataNotify.message || 'Errore nell\'invio della notifica.');
-      }
+      case 'referral':
+        return <ReferralManagement />;
 
-      setIsModalOpen(false); // Chiudi il modale
-    } catch (error) {
-      console.error('Errore durante il processo di acquisto:', error);
-      alert('Errore durante il processo di acquisto. Riprova.');
-      setIsModalOpen(false);
+      default:
+        return <div className="text-center text-gray-500">Seleziona una sezione.</div>;
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-100 to-pink-200 text-fuchsia-900 font-sans">
-      <div className="max-w-4xl mx-auto p-4">
-        {/* QR Code Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-          {qrCode && <img src={qrCode} alt="QR Code" className="my-4 mx-auto w-48 h-48 object-cover rounded-lg shadow-md" />}
-          <p className="text-center mt-2 font-medium">Scannerizza al checkout</p>
-        </div>
+      <div className="max-w-md mx-auto p-4">
+        {renderContent()}
 
-        {/* Profile Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-          <LogoutButton />
-          <h2 className="text-2xl font-bold">{user}</h2>
-          <p className="text-fuchsia-600 font-medium">Punti Accumulati: {points}</p>
-        </div>
+        {/* Alert Modal */}
+        {alert && (
+          <AlertModal
+            message={alert.message}
+            type={alert.type}
+            onClose={() => setAlert(null)}
+          />
+        )}
 
-        {/* Points Progress Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-          <h3 className="text-xl font-bold mb-4">Points Progress</h3>
-          <div className="w-32 h-32 mx-auto">
-            <CircularProgressbar
-              value={(points / 1000) * 100}
-              text={`${points}/1000`}
-              styles={buildStyles({
-                textSize: "14px",
-                pathColor: "#d946ef",
-                textColor: "#701a75",
-                trailColor: "#fdf2f8"
-              })}
-            />
-          </div>
-        </div>
-
-        {/* Products Section */}
-        <div className="mb-20">
-          <h3 className="text-xl font-bold mb-4">{showQrProducts ? "Prodotti Acquistati" : "Prodotti Disponibili"}</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {(showQrProducts ? qrCodes : products).map((item, index) => {
-              const product = showQrProducts 
-                ? products.find(p => p.id === item.product_id) 
-                : item;
-
-              return (
-                <div
-                  key={index}
-                  className={`bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 ${points >= product.points ? "hover:shadow-xl" : "opacity-50"}`}
-                  onClick={() => !showQrProducts && handleProductClick(product)}
-                  onMouseEnter={() => setShowQrCodeIndex(index)} // Mostra QR code
-                  onMouseLeave={() => setShowQrCodeIndex(null)} // Nasconde QR code
-                >
-                  {showQrCodeIndex === index && showQrProducts ? (
-                    <img 
-                      src={item.qr_code} 
-                      alt={`QR Code ${index}`} 
-                      className="w-full h-64 object-cover cursor-pointer" 
-                    />
-                  ) : (
-                    <>
-                      <img 
-                        src={showQrProducts ? product.image_url : product.image_url} 
-                        alt={product.name} 
-                        className="w-full h-48 object-cover cursor-pointer" 
-                      />
-                      <div className="p-4">
-                        <h4 className="font-bold mb-2">{product.name}</h4>
-                        <p className="text-sm text-fuchsia-600">{product.points} points</p>
-                      </div>
-                    </>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Modal for Purchase Confirmation */}
+        {/* Modal Photo */}
         {isModalOpen && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-white rounded-lg p-6">
-              <h3 className="text-lg font-bold mb-4">Conferma Acquisto</h3>
-              <p>Sei sicuro di voler acquistare {selectedProduct.name} per {selectedProduct.points} punti?</p>
-              <div className="mt-4 flex justify-end">
-                <button onClick={handleConfirmPurchase} className="bg-fuchsia-500 text-white px-4 py-2 rounded-md mr-2">Conferma</button>
-                <button onClick={() => setIsModalOpen(false)} className="bg-gray-300 px-4 py-2 rounded-md">Annulla</button>
-              </div>
-            </div>
-          </div>
+          <ModalPhoto
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            onPhotoUpdate={handlePhotoUpdate}
+          />
         )}
       </div>
 
-      {/* Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white shadow-lg rounded-t-2xl">
-        <ul className="flex justify-around p-4">
-          {[{ icon: FaHome, label: "Home" }, { icon: FaUser, label: "Profile" }, { icon: FaGift, label: "Rewards" }].map((item) => (
-            <li key={item.label}>
-              <button
-                onClick={() => {
-                  setActiveTab(item.label.toLowerCase());
-                  if (item.label === "Rewards") setShowQrProducts(true);
-                  else setShowQrProducts(false);
-                }}
-                className={`p-2 rounded-full transition-colors duration-300 ${activeTab === item.label.toLowerCase() ? "bg-fuchsia-500 text-white" : "text-fuchsia-500 hover:bg-fuchsia-100"}`}
-                aria-label={item.label}
-              >
-                <item.icon className="w-6 h-6" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <Navigation 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+      />
     </div>
   );
 };

@@ -34,3 +34,58 @@ body {
 input{
   color: rgb(222, 5, 230);
 }
+
+
+
+.slick-prev:before, .slick-next:before {
+  background-color: transparent;
+  border-radius: 50%;
+  margin: 0 auto;
+  color: rgb(248, 155, 243) !important;
+  transform: translateY(-50%);
+}
+
+
+/* globals.css */
+
+/* globals.css */
+
+/* Animazione per l'ingresso del modal */
+@keyframes scale-up {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-scale-up {
+  animation: scale-up 0.3s ease-out forwards;
+}
+/* Sfocatura del background */
+.blur-background {
+  filter: blur(8px); /* Intensità della sfocatura */
+}
+
+/* Centrare il modal */
+.modal-centered {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Assicura che l'elemento body non sia scrollabile durante l'apertura del modal */
+.modal-open {
+  overflow: hidden;
+}
+
+
+.qr:hover{
+  transform: scale(1.4);
+  position: relative;
+ 
+}
+

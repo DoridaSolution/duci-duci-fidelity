@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import QrScanner from 'react-qr-scanner';
 
 const AdminDashboard = () => {
@@ -9,6 +9,11 @@ const AdminDashboard = () => {
   const [message, setMessage] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [pointsToAdd, setPointsToAdd] = useState(0);
+
+  // Ref per l'elemento audio
+  const successSoundRef = useRef(null);
 
   const handleScan = (data) => {
     if (data) {
@@ -41,36 +46,66 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     
-    const pointsToAdd = Math.floor(amountSpent / 10);
+    if (!userEmail) {
+      setMessage('Errore: Nessuna email utente trovata. Scannerizza un codice valido.');
+      return;
+    }
+
+    const calculatedPoints = Math.floor(amountSpent / 10);
+    setPointsToAdd(calculatedPoints);
+    setIsModalOpen(true); // Mostra il modale di conferma
+  };
+
+  const confirmAddPoints = async () => {
+    if (!userEmail) {
+      setMessage('Errore: Nessuna email utente trovata. Scannerizza un codice valido.');
+      return;
+    }
+
     const token = localStorage.getItem('token');
 
     const res = await fetch(`/api/users/add`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
       },
+      credentials: 'include',
       body: JSON.stringify({ email: userEmail, pointsToAdd }),
     });
 
     const data = await res.json();
     if (res.ok) {
       setMessage('Punti aggiunti con successo!');
-      setUserEmail('');
-      setAmountSpent(0);
-      setUserData(null);
+      // Riproduci il suono di successo
+      successSoundRef.current.play();
+      // Reset degli stati
+      resetStates();
     } else {
       setMessage(data.message || 'Errore durante l\'aggiunta dei punti.');
     }
+    setIsModalOpen(false); // Chiudi il modale
+  };
+
+  const cancelAddPoints = () => {
+    setIsModalOpen(false); // Chiudi il modale senza aggiungere punti
+  };
+
+  const resetStates = () => {
+    setUserEmail('');
+    setAmountSpent(0);
+    setUserData(null);
+    setPointsToAdd(0);
+    setIsScanning(false);
+    setMessage('');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-pink-100 to-pink-200 text-fuchsia-900 font-sans p-4">
+    <div className="">
       <div className="max-w-md mx-auto bg-white rounded-2xl shadow-lg p-6">
-        <h1 className="text-3xl font-bold text-center text-fuchsia-900 mb-4">Admin Dashboard</h1>
+        <h1 className="text-3xl font-bold text-center text-fuchsia-900 mb-4">Checkout points</h1>
         
         <button 
           onClick={() => setIsScanning(!isScanning)} 
@@ -100,13 +135,13 @@ const AdminDashboard = () => {
 
         <form onSubmit={handleSubmit} className="space-y-6 mt-4">
           <div>
-            <label htmlFor="userEmail" className="block text-sm font-medium text-pink-700">User Email</label>
+            <label htmlFor="userEmail" className="block text-sm font-medium text-pink-700 d-none">User Email</label>
             <input
               type="text"
               id="userEmail"
               value={userEmail}
               placeholder="User Email from QR Code"
-              className="input input-bordered w-full"
+              className="input input-bordered w-full d-none"
               readOnly
             />
           </div>
@@ -137,6 +172,35 @@ const AdminDashboard = () => {
             <p className="text-center text-red-500 mt-2">{message}</p>
           )}
         </form>
+
+        {/* Modale di Conferma */}
+        {isModalOpen && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 text-gray-900">
+            <div className="bg-white rounded-lg p-6 w-96 shadow-lg">
+              <h2 className="text-2xl font-bold text-fuchsia-700 mb-4">Conferma Aggiunta Punti</h2>
+              <p className="mb-2">Email Utente: {userEmail}</p>
+              <p className="mb-2">Importo Speso: €{amountSpent}</p>
+              <p className="mb-4">Punti da Aggiungere: {pointsToAdd}</p>
+              <div className="flex justify-end space-x-4">
+                <button
+                  onClick={confirmAddPoints}
+                  className="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-md"
+                >
+                  Conferma
+                </button>
+                <button
+                  onClick={cancelAddPoints}
+                  className="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-md"
+                >
+                  Annulla
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Elemento audio per il suono di successo */}
+        <audio ref={successSoundRef} src="/success.mp3" />
       </div>
     </div>
   );

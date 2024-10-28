@@ -16,22 +16,22 @@ export async function POST(request) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userIdFromToken = decoded.userId;  // Estrarre l'ID utente dal token JWT
 
-    // Estrazione dei dati dal corpo della richiesta (productId)
-    const { productId } = await request.json();
+    // Estrazione dei dati dal corpo della richiesta (productId e purchaseId)
+    const { productId, purchaseId } = await request.json();
 
-    // Verifica che productId sia fornito
-    if (!productId) {
-      return new NextResponse(JSON.stringify({ message: 'Dati mancanti: productId' }), { status: 400 });
+    // Verifica che productId e purchaseId siano forniti
+    if (!productId || !purchaseId) {
+      return new NextResponse(JSON.stringify({ message: 'Dati mancanti: productId o purchaseId' }), { status: 400 });
     }
 
-    // Genera un QR code con userId e productId
-    const qrData = { userId: userIdFromToken, productId };
+    // Genera un QR code con userId, productId e purchaseId
+    const qrData = { userId: userIdFromToken, productId, purchaseId };
     const qrCodeGenerated = await QRCode.toDataURL(JSON.stringify(qrData));
 
     // Salva il QR code nella tabella purchases
     const purchaseResult = await pool.query(
-      'UPDATE purchases SET qr_code = $1 WHERE user_id = $2 AND product_id = $3 RETURNING *',
-      [qrCodeGenerated, userIdFromToken, productId]
+      'UPDATE purchases SET qr_code = $1 WHERE id = $2 AND user_id = $3 AND product_id = $4 RETURNING *',
+      [qrCodeGenerated, purchaseId, userIdFromToken, productId]
     );
 
     // Controlla se l'acquisto esiste

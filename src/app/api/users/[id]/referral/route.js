@@ -1,16 +1,16 @@
 import { NextResponse } from 'next/server';
-import { pool } from '../../../../lib/db';
+import { pool } from '../../../../lib/db'; // Verifica che il percorso di importazione sia corretto
 
 export async function POST(request, { params }) {
   const { inviter_id, invited_email } = await request.json();
-  const { id } = params;
+  const { id } = params; // 'id' dovrebbe essere l'inviter_id
 
   try {
     // Trova l'ID dell'invitato
     const invitedResult = await pool.query('SELECT id FROM users WHERE email = $1', [invited_email]);
 
     if (invitedResult.rows.length === 0) {
-      return new NextResponse(JSON.stringify({ message: 'Utente invitato non trovato.' }), { status: 404 });
+      return NextResponse.json({ message: 'Utente invitato non trovato.' }, { status: 404 });
     }
 
     const invited_id = invitedResult.rows[0].id;
@@ -21,9 +21,9 @@ export async function POST(request, { params }) {
       [inviter_id, invited_id]
     );
 
-    return new NextResponse(JSON.stringify({ message: 'Referral registrato con successo' }), { status: 201 });
+    return NextResponse.json({ message: 'Referral registrato con successo' }, { status: 201 });
   } catch (error) {
     console.error('Errore durante la registrazione del referral:', error);
-    return new NextResponse(JSON.stringify({ message: 'Errore del server' }), { status: 500 });
+    return NextResponse.json({ message: 'Errore del server' }, { status: 500 });
   }
 }

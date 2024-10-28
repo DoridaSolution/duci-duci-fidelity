@@ -1,4 +1,5 @@
 'use client';
+import { CiLogout } from "react-icons/ci";
 
 import { useState } from 'react';
 
@@ -23,12 +24,13 @@ export default function LogoutButton() {
   };
 
   return (
-    <div>
+    <div className="text-center d-flex flex-column justify-content-end align-items-end">
       <button
         onClick={handleLogout}
-        className="btn btn-primary w-full bg-red-500 hover:bg-red-600 text-white"
+        className="btn bg-pink-100 "
       >
-        Logout
+      <CiLogout />
+
       </button>
       {message && (
         <p className="text-center text-green-500 mt-2">{message}</p>

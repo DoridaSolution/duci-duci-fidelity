@@ -1,5 +1,7 @@
 import Image from "next/image";
 import CustomerDashboard from "./Components/CustomerDashboard";
+import 'slick-carousel/slick/slick.css'; 
+import 'slick-carousel/slick/slick-theme.css';
 
 export default function Home() {
   return (

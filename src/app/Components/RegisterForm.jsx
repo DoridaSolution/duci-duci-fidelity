@@ -1,10 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function RegisterForm() {
   const [form, setForm] = useState({ name: '', email: '', password: '', referralCode: '' });
   const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const referralCode = urlParams.get('referral'); // Ottiene il valore del parametro "referral"
+    if (referralCode) {
+      setForm((prevForm) => ({ ...prevForm, referralCode })); // Imposta il referralCode nel form
+    }
+  }, []); // Esegu
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -72,6 +80,7 @@ export default function RegisterForm() {
           id="referralCode"
           placeholder="Enter referral code if you have one"
           className="input input-bordered w-full"
+          value={form.referralCode} // Valore del referralCode nel form
           onChange={(e) => setForm({ ...form, referralCode: e.target.value })}
         />
       </div>

@@ -2,8 +2,19 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { NextResponse } from 'next/server';
 import { pool } from '../../../lib/db'; // Assicurati di importare il client del database
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const rateLimit = new Map(); // Mappa per il rate limiting
+
+// Configura AWS S3 con SDK v3
+const s3 = new S3Client({
+  region: 'eu-north-1',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
 
 // Funzione per trovare l'utente per email
 async function findUserByEmail(email) {
@@ -30,8 +41,25 @@ function generateToken(user, rememberMe) {
   }
 }
 
+// Funzione per generare l'URL firmato della foto dell'utente
+async function getSignedPhotoUrl(photoKey) {
+  if (!photoKey) return null;
+  try {
+    const command = new GetObjectCommand({
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: photoKey,
+    });
+    // Genera l'URL firmato con validità di 1 ora
+    const signedUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });
+    return signedUrl;
+  } catch (error) {
+    console.error('Errore durante la generazione dell\'URL firmato:', error);
+    return null;
+  }
+}
+
 export async function POST(request) {
-  const { email, password, rememberMe } = await request.json();  // Aggiungi rememberMe nei parametri
+  const { email, password, rememberMe } = await request.json(); // Aggiungi rememberMe nei parametri
 
   // Controlla il rate limiting
   const ip = request.headers.get('x-forwarded-for') || request.ip;
@@ -63,8 +91,15 @@ export async function POST(request) {
     return new NextResponse(JSON.stringify({ message: 'Errore durante la generazione del token' }), { status: 500 });
   }
 
+  // Genera l'URL firmato della foto dell'utente, se presente
+  const photoKey = user.photo ? user.photo.split('/').pop() : null;
+  const signedPhotoUrl = await getSignedPhotoUrl(photoKey);
+
   // Imposta il token come cookie HTTP-only
-  const response = new NextResponse(JSON.stringify({ isAdmin: user.role === 'admin' }), { status: 200 });
+  const response = new NextResponse(JSON.stringify({ 
+    isAdmin: user.role === 'admin', 
+    photoUrl: signedPhotoUrl 
+  }), { status: 200 });
   
   response.cookies.set('token', token, {
     httpOnly: true,

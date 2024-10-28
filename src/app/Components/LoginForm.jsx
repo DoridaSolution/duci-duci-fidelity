@@ -50,6 +50,7 @@ export default function LoginForm() {
         window.location.href = '/dashboard'; // Reindirizza alla dashboard per admin
       } else {
         window.location.href = '/'; // Reindirizza alla homepage per utenti normali
+        localStorage.setItem("photoUrl", data.photoUrl);
       }
     } else {
       setMessage(data.message || 'Login fallito, riprova.');
